@@ -1,0 +1,24 @@
+# The netowrk to operate in: bitcoin, signet, testnet, testnet4
+network = "testnet4"
+# The URL of an esplora API
+esplora_url = "https://mempool.space/testnet4/api"
+# A list of addresses to watch
+addresses = [
+    "tb1pk3su3yelyq4349c23rrmk0xa34dpmxght2t2ssenqj9vz9s4692shkkxxd",
+    "tb1pp0aea5wv49f43t30hex2x5avlxelxlac7uwrjr0u57k7xnld3qzqnulr5q",
+    "tb1punh3uhchgyaa0h95pxwyjkatn7qvulm6043gzfqwvmqw3f9vyetstd73va"
+]
+# Whether to send an email with the addresses you subscribed to
+notify_subscriptions = true
+# Whether to send an email about deposits to the addresses you subscribed to
+notify_deposits = true
+# The email addresses of recipients of notifications
+recipient_emails = ["bilbo@example.org"]
+# The SMTP username
+smtp_username = "smaug@example.org"
+# The SMTP password
+smtp_password = "50m3r4nd0mp455w0rd"
+# The SMTP server
+smtp_server = "smtp.example.org"
+# The SMTP port
+smtp_port = 1337
