@@ -1,0 +1,13 @@
+[Unit]
+Description=Koerier
+After=network-online.target
+
+[Service]
+User=root
+Type=simple
+WorkingDirectory=/root/smaug
+ExecStart=/root/.cargo/bin/smaug -c config.toml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
