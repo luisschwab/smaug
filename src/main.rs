@@ -67,6 +67,20 @@ pub(crate) fn check_addresses(
         .collect()
 }
 
+fn format_with_commas(num: u64) -> String {
+    let num_str = num.to_string();
+    let mut result = String::new();
+
+    for (i, ch) in num_str.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            result.push(',');
+        }
+        result.push(ch);
+    }
+
+    result.chars().rev().collect()
+}
+
 #[tokio::main]
 async fn main() -> Result<(), SmaugError> {
     env_logger::Builder::from_default_env()

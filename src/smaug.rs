@@ -150,8 +150,10 @@ pub(crate) async fn smaug(config: Config) -> Result<(), SmaugError> {
                     let height = event_params.height;
 
                     info!(
-                        "Somebody deposited {} to address {} at height {}",
-                        utxo.value, address, height
+                        "Somebody deposited {} sats to address {} at height {}",
+                        format_with_commas(utxo.value.to_sat()),
+                        address,
+                        height
                     );
 
                     // TODO(@luisschwab): if notify_deposits send email
@@ -162,8 +164,10 @@ pub(crate) async fn smaug(config: Config) -> Result<(), SmaugError> {
                     let height = event_params.height;
 
                     warn!(
-                        "Somebody withdrew {} from address {} at height {}",
-                        utxo.value, address, height
+                        "Somebody withdrew {} sats from address {} at height {}!",
+                        format_with_commas(utxo.value.to_sat()),
+                        address,
+                        height
                     );
 
                     // TODO(@luisschwab): send email
