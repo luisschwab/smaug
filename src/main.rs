@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use std::{fs, process};
 
 use bitcoin::{
@@ -7,12 +5,13 @@ use bitcoin::{
     address::{Address, NetworkUnchecked},
 };
 use clap::Parser;
+use lettre::Address as EmailAddress;
 use log::{debug, error, info};
+use serde::{Deserialize, Serialize};
 
-use crate::error::SmaugError;
-use crate::smaug::{Config, smaug};
+use crate::smaug::{SmaugError, smaug};
 
-mod error;
+mod email;
 mod smaug;
 
 /// TOML configuration file path CLI argument.
@@ -22,6 +21,31 @@ mod smaug;
 pub(crate) struct Cli {
     #[arg(long = "config", short = 'c', help = "The path to the TOML configuration file")]
     pub(crate) config: String,
+}
+
+/// `smaug` configuration parameters.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct Config {
+    /// The network this program will operate on.
+    pub(crate) network: Network,
+    /// The full URL of the Esplora chain-source.
+    pub(crate) esplora_url: String,
+    /// The list of addresses to watch for movement.
+    pub(crate) addresses: Vec<Address<NetworkUnchecked>>,
+    /// Wheter to notify of address subscriptions (this will run once, at startup).
+    pub(crate) notify_subscriptions: bool,
+    /// Whether to notify of deposits to any of the addresses.
+    pub(crate) notify_deposits: bool,
+    /// Recipient emails for address notifications.
+    pub(crate) recipient_emails: Vec<EmailAddress>,
+    /// The SMTP username.
+    pub(crate) smtp_username: EmailAddress,
+    /// The SMTP password.
+    pub(crate) smtp_password: String,
+    /// The SMTP server.
+    pub(crate) smtp_server: String,
+    /// The SMTP port.
+    pub(crate) smtp_port: u16,
 }
 
 fn parse_config(config_path: &str) -> Config {
@@ -46,7 +70,13 @@ fn parse_config(config_path: &str) -> Config {
     debug!("network = {}", config.network);
     debug!("esplora_url = {}", config.esplora_url);
     debug!("addresses = {:#?}", config.addresses);
+    debug!("notify_subscriptions = {:#?}", config.notify_subscriptions);
     debug!("notify_deposits = {}", config.notify_deposits);
+    debug!("recipient_emails = {:#?}", config.recipient_emails);
+    debug!("smtp_username = {}", config.smtp_username);
+    debug!("smtp_password = {}", config.smtp_password);
+    debug!("smtp_server = {}", config.smtp_server);
+    debug!("smtp_port = {}", config.smtp_port);
     debug!("");
 
     config
@@ -91,7 +121,7 @@ async fn main() -> Result<(), SmaugError> {
     let args = Cli::parse();
     let config = parse_config(&args.config);
 
-    let _ = smaug(config).await?;
+    let _ = smaug(&config).await?;
 
     Ok(())
 }

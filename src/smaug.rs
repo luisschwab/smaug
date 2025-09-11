@@ -1,40 +1,22 @@
-use std::{
-    collections::{HashMap, HashSet},
-    thread,
-    time::Duration,
-};
+use std::{collections::HashMap, thread, time::Duration};
 
-use bitcoin::{
-    Network,
-    address::{Address, NetworkChecked, NetworkUnchecked},
-};
-use esplora_client::{Builder, Utxo, UtxoStatus};
-use log::{debug, error, info, warn};
-use serde::{Deserialize, Serialize};
+use bitcoin::address::{Address, NetworkChecked};
+use esplora_client::{Builder, Utxo};
+use log::{debug, error, info};
 
+use thiserror::Error;
+
+use crate::Config;
 use crate::check_addresses;
-use crate::error::SmaugError;
+use crate::email::{EmailError, build_messages, send_messages};
 
 /// The amount of seconds to sleep for between checks.
 pub(crate) const SLEEP_SECS: u64 = 10;
 
-/// `smaug` configuration parameters.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct Config {
-    /// The network this program will operate on.
-    pub(crate) network: Network,
-    /// The full URL of the Esplora chain-source.
-    pub(crate) esplora_url: String,
-    /// The list of addresses to watch for movement.
-    pub(crate) addresses: Vec<Address<NetworkUnchecked>>,
-    /// Wheter to notify of deposits to any of the addresses.
-    pub(crate) notify_deposits: bool,
-}
-
 /// A [`HashMap`] that maps an address to multiple [`Utxo`]s.
 pub(crate) type UtxoDB = HashMap<Address<NetworkChecked>, Vec<Utxo>>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct EventParams {
     /// What address this event refers to.
     pub(crate) address: Address,
@@ -44,12 +26,29 @@ pub(crate) struct EventParams {
     pub(crate) height: u32,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum Event {
+    /// Subscription to a set of addresses.
+    Subscription(Vec<Address>),
     /// A deposit to an address.
     Deposit(EventParams),
     /// A withdrawal from an address.
     Withdrawal(EventParams),
+}
+
+#[derive(Debug, Error)]
+pub(crate) enum SmaugError {
+    /// Error parsing an [Address<NetworkUnchecked>] to an [Address<NetworkChecked>].
+    #[error(transparent)]
+    NetworkMismatch(#[from] bitcoin::address::ParseError),
+
+    /// Error creating `EsploraClient`.
+    #[error(transparent)]
+    EsploraClient(#[from] esplora_client::Error),
+
+    /// Error sending email notifications.
+    #[error(transparent)]
+    Email(#[from] EmailError),
 }
 
 /// Compute the difference in the set of UTXOs locked to an address.
@@ -71,7 +70,29 @@ pub(crate) fn compute_diff(current_state: &Vec<Utxo>, last_state: &Vec<Utxo>) ->
     (deposited, withdrawn)
 }
 
-pub(crate) async fn smaug(config: Config) -> Result<(), SmaugError> {
+pub(crate) fn handle_event(config: &Config, event: &Event) -> Result<(), SmaugError> {
+    let messages = build_messages(config, event)?;
+
+    // Send subscription and deposit emails
+    // iff `notify_subscriptions` and `notify_deposits` are set.
+    match event {
+        Event::Subscription(_) => {
+            if config.notify_deposits == true {
+                send_messages(config, &messages)?;
+            }
+        }
+        Event::Deposit(_) => {
+            if config.notify_deposits == true {
+                send_messages(config, &messages)?;
+            }
+        }
+        Event::Withdrawal(_) => send_messages(config, &messages)?,
+    }
+
+    Ok(())
+}
+
+pub(crate) async fn smaug(config: &Config) -> Result<(), SmaugError> {
     // Build the esplora client `Smaug` will use to make requests.
     let esplora = Builder::new(&config.esplora_url).build_async()?;
 
@@ -94,6 +115,12 @@ pub(crate) async fn smaug(config: Config) -> Result<(), SmaugError> {
     }
     debug!("initial_state = {:#?}", current_state);
 
+    // Send subscription email iff `config.notify_subscriptions` is set.
+    if config.notify_subscriptions == true {
+        let event = Event::Subscription(addresses.clone());
+        handle_event(config, &event)?;
+    }
+
     loop {
         // Fetch the current height.
         let last_chain_tip = current_chain_tip;
@@ -108,7 +135,7 @@ pub(crate) async fn smaug(config: Config) -> Result<(), SmaugError> {
         // The initial state becomes the last state.
         let last_state = current_state.clone();
 
-        info!("Fetching state at height {}", current_chain_tip);
+        info!("Fetching state at height {}...", current_chain_tip);
 
         // Fetch the current state from Esplora.
         let mut current_state = UtxoDB::new();
@@ -142,36 +169,11 @@ pub(crate) async fn smaug(config: Config) -> Result<(), SmaugError> {
         }
         debug!("events = {:#?}", events);
 
-        for event in events {
+        for event in &events {
             match event {
-                Event::Deposit(event_params) => {
-                    let address = event_params.address;
-                    let utxo = event_params.utxo;
-                    let height = event_params.height;
-
-                    info!(
-                        "Somebody deposited {} sats to address {} at height {}",
-                        format_with_commas(utxo.value.to_sat()),
-                        address,
-                        height
-                    );
-
-                    // TODO(@luisschwab): if notify_deposits send email
-                }
-                Event::Withdrawal(event_params) => {
-                    let address = event_params.address;
-                    let utxo = event_params.utxo;
-                    let height = event_params.height;
-
-                    warn!(
-                        "Somebody withdrew {} sats from address {} at height {}!",
-                        format_with_commas(utxo.value.to_sat()),
-                        address,
-                        height
-                    );
-
-                    // TODO(@luisschwab): send email
-                }
+                Event::Deposit(_) => handle_event(config, &event)?,
+                Event::Withdrawal(_) => handle_event(config, &event)?,
+                _ => {}
             }
         }
 
