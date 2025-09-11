@@ -1,5 +1,5 @@
 [Unit]
-Description=Koerier
+Description=Smaug, the UTXO guardian
 After=network-online.target
 
 [Service]
