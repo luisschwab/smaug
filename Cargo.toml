@@ -9,7 +9,7 @@ readme = "README.md"
 keywords = ["bitcoin", "email", "lotr"]
 
 [dependencies]
-esplora-client = { git = "https://github.com/bitcoindevkit/rust-esplora-client" }
+esplora-client = { git = "https://github.com/bitcoindevkit/rust-esplora-client", features = ["blocking-https-rustls"] }
 env_logger = "0.11.8"
 log = "0.4.28"
 serde = { version = "1.0.219", features = ["derive"] }

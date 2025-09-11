@@ -110,8 +110,7 @@ fn format_with_commas(num: u64) -> String {
     result.chars().rev().collect()
 }
 
-#[tokio::main]
-async fn main() -> Result<(), SmaugError> {
+fn main() -> Result<(), SmaugError> {
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Info)
         .parse_default_env()
@@ -120,7 +119,7 @@ async fn main() -> Result<(), SmaugError> {
     let args: Cli = argh::from_env();
     let config = parse_config(&args.config);
 
-    let _ = smaug(&config).await?;
+    let _ = smaug(&config)?;
 
     Ok(())
 }

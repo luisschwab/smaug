@@ -96,12 +96,12 @@ pub(crate) fn handle_event(config: &Config, event: &Event) -> Result<(), SmaugEr
 }
 
 /// Long-poll the Esplora API, compute diffs in address state and notify the recipients.
-pub(crate) async fn smaug(config: &Config) -> Result<(), SmaugError> {
+pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
     // Build the esplora client `Smaug` will use to make requests.
-    let esplora = Builder::new(&config.esplora_url).build_async()?;
+    let esplora = Builder::new(&config.esplora_url).build_blocking();
 
     // Get the current chain tip.
-    let mut current_chain_tip = esplora.get_height().await?;
+    let mut current_chain_tip = esplora.get_height()?;
 
     // Perform network validation on the addresses provided.
     let addresses = check_addresses(&config.addresses, &config.network)?;
@@ -110,7 +110,7 @@ pub(crate) async fn smaug(config: &Config) -> Result<(), SmaugError> {
     let mut current_state = UtxoDB::new();
     for address in &addresses {
         // Fetch the UTXOs currently locked to the address.
-        let utxos = esplora.get_address_utxos(&address).await?;
+        let utxos = esplora.get_address_utxos(&address)?;
 
         info!("Subscribed to address {} at height {}", address, current_chain_tip);
 
@@ -128,7 +128,7 @@ pub(crate) async fn smaug(config: &Config) -> Result<(), SmaugError> {
     loop {
         // Fetch the current height.
         let last_chain_tip = current_chain_tip;
-        current_chain_tip = esplora.get_height().await?;
+        current_chain_tip = esplora.get_height()?;
 
         // Check if the `current_chain_tip` is superior than `last_chain_tip`. If not, skip.
         if current_chain_tip <= last_chain_tip {
@@ -144,7 +144,7 @@ pub(crate) async fn smaug(config: &Config) -> Result<(), SmaugError> {
         // Fetch the current state from Esplora.
         let mut current_state = UtxoDB::new();
         for address in &addresses {
-            let utxos = esplora.get_address_utxos(&address).await?;
+            let utxos = esplora.get_address_utxos(&address)?;
             current_state.insert(address.clone(), utxos);
         }
 
