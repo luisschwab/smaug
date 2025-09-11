@@ -7,8 +7,20 @@
 > Well, thief! I smell you, I hear your breath, I feel your air. Where are you?
 >
 > Come now, don't be shy... step into the light.
+>
+> There you are, Thief in the Shadows!
 
-`smaug` is a tool that keeps watch of your UTXOs. If you subscribe to an address and UTXOs from it move, `smaug` will send you an email to warn you.
+`smaug` is a tool that keeps watch of your UTXOs. If you subscribe to an address and UTXOs from it move,
+`smaug` will send you an email to warn you.
+
+## Use Case
+
+Let's say you use [BIP85](https://bip85.com) to derive child seeds from a master seed,
+and you only keep a physical backup of the master seed. It's important to know if that seed has been
+compromised. If you deposit some money on an address of the master seed and subscribe to that
+address, you'll be notified via email if that money gets withdrawn, and you'll know that your master seed
+has been compromised, giving you time to move your funds elsewhere before an attacker gets his hands
+on them.
 
 ## Usage
 
