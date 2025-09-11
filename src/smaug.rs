@@ -16,6 +16,7 @@ pub(crate) const SLEEP_SECS: u64 = 10;
 /// A [`HashMap`] that maps an address to multiple [`Utxo`]s.
 pub(crate) type UtxoDB = HashMap<Address<NetworkChecked>, Vec<Utxo>>;
 
+/// Parameters of an [`Event`].
 #[derive(Clone, Debug)]
 pub(crate) struct EventParams {
     /// What address this event refers to.
@@ -26,6 +27,7 @@ pub(crate) struct EventParams {
     pub(crate) height: u32,
 }
 
+/// An address-related event.
 #[derive(Clone, Debug)]
 pub(crate) enum Event {
     /// Subscription to a set of addresses.
@@ -70,6 +72,7 @@ pub(crate) fn compute_diff(current_state: &Vec<Utxo>, last_state: &Vec<Utxo>) ->
     (deposited, withdrawn)
 }
 
+/// Handle an [`Event`] according to it's variant.
 pub(crate) fn handle_event(config: &Config, event: &Event) -> Result<(), SmaugError> {
     let messages = build_messages(config, event)?;
 
@@ -92,6 +95,7 @@ pub(crate) fn handle_event(config: &Config, event: &Event) -> Result<(), SmaugEr
     Ok(())
 }
 
+/// Long-poll the Esplora API, compute diffs in address state and notify the recipients.
 pub(crate) async fn smaug(config: &Config) -> Result<(), SmaugError> {
     // Build the esplora client `Smaug` will use to make requests.
     let esplora = Builder::new(&config.esplora_url).build_async()?;

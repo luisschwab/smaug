@@ -48,13 +48,13 @@ notify_subscriptions = true
 # Whether to send an email about deposits to the addresses you subscribed to
 notify_deposits = true
 # The email addresses of recipients of notifications
-recipient_emails = ["bilbo@example.org"]
+recipient_emails = ["bilbo@baggins.net"]
 # The SMTP username
-smtp_username = "smaug@example.org"
+smtp_username = "smaug@erebor.com"
 # The SMTP password
 smtp_password = "50m3r4nd0mp455w0rd"
 # The SMTP server
-smtp_server = "smtp.example.org"
+smtp_server = "smtp.erebor.com"
 # The SMTP port
 smtp_port = 1337
 ```
@@ -67,9 +67,12 @@ smaug -c config.toml
 [2025-09-11T04:50:36Z INFO  smaug::smaug] Subscribed to address tb1pk3su3yelyq4349c23rrmk0xa34dpmxght2t2ssenqj9vz9s4692shkkxxd at height 101596
 [2025-09-11T04:50:36Z INFO  smaug::smaug] Subscribed to address tb1pp0aea5wv49f43t30hex2x5avlxelxlac7uwrjr0u57k7xnld3qzqnulr5q at height 101596
 [2025-09-11T04:50:36Z INFO  smaug::smaug] Subscribed to address tb1punh3uhchgyaa0h95pxwyjkatn7qvulm6043gzfqwvmqw3f9vyetstd73va at height 101596
-[2025-09-11T04:50:41Z INFO  smaug::email] Sent email to bilbo@example.org
+[2025-09-11T04:50:41Z INFO  smaug::email] Sent email to bilbo@baggins.net
 [2025-09-11T04:52:33Z INFO  smaug::smaug] Fetching state at height 101597...
 [2025-09-11T05:12:34Z INFO  smaug::smaug] Fetching state at height 101598...
+[2025-09-11T05:12:41Z INFO  smaug::smaug] Heads up, someone withdrew 1,000,000 sats from address tb1pk3su3yelyq4349c23rrmk0xa34dpmxght2t2ssenqj9vz9s4692shkkxxd
+[2025-09-11T05:12:42Z INFO  smaug::smaug] Sent email to bilbo@baggins.net
+
 ```
 
 Optionally, use the example [`systemd`](./smaug.service.example) service provided here:

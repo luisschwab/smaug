@@ -2,6 +2,11 @@
 name = "smaug"
 version = "0.1.0"
 edition = "2024"
+authors = ["Luis Schwab <luisschwab@protonmail.com"]
+description = "Smaug watches your coins and sends you an email if they move"
+license = "MIT"
+readme = "README.md"
+keywords = ["bitcoin", "email", "lotr"]
 
 [dependencies]
 esplora-client = { git = "https://github.com/bitcoindevkit/rust-esplora-client" }

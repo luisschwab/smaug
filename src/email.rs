@@ -69,7 +69,7 @@ pub(crate) fn build_messages(config: &Config, event: &Event) -> Result<Vec<Messa
             );
 
             info!(
-                "Somebody deposited {} sats to address {} at height {}",
+                "Someone deposited {} sats to address {} at height {}",
                 format_with_commas(event_params.utxo.value.to_sat()),
                 event_params.address,
                 event_params.height
@@ -87,7 +87,7 @@ pub(crate) fn build_messages(config: &Config, event: &Event) -> Result<Vec<Messa
             );
 
             warn!(
-                "Heads up, somebody withdrew {} sats from address {} at height {}!",
+                "Heads up, someone withdrew {} sats from address {} at height {}!",
                 format_with_commas(event_params.utxo.value.to_sat()),
                 event_params.address,
                 event_params.height

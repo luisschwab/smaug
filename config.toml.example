@@ -13,12 +13,12 @@ notify_subscriptions = true
 # Whether to send an email about deposits to the addresses you subscribed to
 notify_deposits = true
 # The email addresses of recipients of notifications
-recipient_emails = ["bilbo@example.org"]
+recipient_emails = ["bilbo@baggins.net"]
 # The SMTP username
-smtp_username = "smaug@example.org"
+smtp_username = "smaug@erebor.com"
 # The SMTP password
 smtp_password = "50m3r4nd0mp455w0rd"
 # The SMTP server
-smtp_server = "smtp.example.org"
+smtp_server = "smtp.erebor.com"
 # The SMTP port
 smtp_port = 1337
