@@ -1,10 +1,10 @@
 use std::{fs, process};
 
+use argh::FromArgs;
 use bitcoin::{
     Network,
     address::{Address, NetworkUnchecked},
 };
-use clap::Parser;
 use lettre::Address as EmailAddress;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
@@ -14,13 +14,12 @@ use crate::smaug::{SmaugError, smaug};
 mod email;
 mod smaug;
 
-/// TOML configuration file path CLI argument.
-#[derive(Parser)]
-#[command(name = "smaug")]
-#[command(about = "smaug watches your addresses and sends you an email if they move")]
-pub(crate) struct Cli {
-    #[arg(long = "config", short = 'c', help = "The path to the TOML configuration file")]
-    pub(crate) config: String,
+/// smaug watches your addresses and sends you an email if they move
+#[derive(FromArgs)]
+struct Cli {
+    /// the path to the TOML configuration file
+    #[argh(option, short = 'c')]
+    config: String,
 }
 
 /// `smaug` configuration parameters.
@@ -111,17 +110,16 @@ fn format_with_commas(num: u64) -> String {
     result.chars().rev().collect()
 }
 
-#[tokio::main]
-async fn main() -> Result<(), SmaugError> {
+fn main() -> Result<(), SmaugError> {
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Info)
         .parse_default_env()
         .init();
 
-    let args = Cli::parse();
+    let args: Cli = argh::from_env();
     let config = parse_config(&args.config);
 
-    let _ = smaug(&config).await?;
+    let _ = smaug(&config)?;
 
     Ok(())
 }
