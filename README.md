@@ -16,11 +16,11 @@
 ## Use Case
 
 Let's say you use [BIP85](https://bip85.com) to derive child seeds from a master seed,
-and you only keep a physical backup of the master seed. It's important to know if that seed has been
-compromised. If you deposit some money on an address of the master seed and subscribe to that
-address, you'll be notified via email if that money gets withdrawn, and you'll know that your master seed
-has been compromised, giving you time to move your funds elsewhere before an attacker gets his hands
-on them.
+and you only keep a physical backup of the master seed. It's critical to know if that seed has been
+compromised (e.g.: an unauthorized person has access to it). If you deposit some bitcoin on an address
+of the master seed and subscribe to that address, you'll be notified via email if that money ever moves.
+If it does move, it means that your master seed has been compromised, giving you time to move your funds
+from child seeds elsewhere before an attacker gets his hands on them.
 
 ## Usage
 
@@ -59,7 +59,7 @@ addresses = [
 notify_subscriptions = true
 # Whether to send an email about deposits to the addresses you subscribed to
 notify_deposits = true
-# The email addresses of recipients of notifications
+# The email addresses of notification recipients
 recipient_emails = ["bilbo@baggins.net"]
 # The SMTP username
 smtp_username = "smaug@erebor.com"
@@ -97,7 +97,8 @@ systemctl start smaug.service
 
 ## Architecture
 
-`smaug` is very simple: it hits the `/address/{address}/utxo` Esplora endpoint to get the current state of the addresses
-(i.e.: what UTXOs are currently locked to it). Then, it does long polling to the same endpoint, always computing the
-difference of the last state and the current state. If a difference is computed, it get's classified as a `Deposit` or `Withdrawal`,
-logs it and notifies the recipients via email.
+`smaug` is very simple: it hits the `/address/{address}/utxo` Esplora endpoint to get the current state
+of the address (what UTXOs are locked to it). Then, it does long polling to the same endpoint
+and computes the differences between the last state and the current state, here called `Event`s.
+These get classified in `Event::Deposit` or `Event::Withdrawal`, `smaug` logs it and notifies
+the recipients via email.

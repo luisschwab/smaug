@@ -12,7 +12,7 @@ addresses = [
 notify_subscriptions = true
 # Whether to send an email about deposits to the addresses you subscribed to
 notify_deposits = true
-# The email addresses of recipients of notifications
+# The email addresses of notification recipients
 recipient_emails = ["bilbo@baggins.net"]
 # The SMTP username
 smtp_username = "smaug@erebor.com"
