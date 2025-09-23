@@ -1,6 +1,9 @@
 use std::{collections::HashMap, thread, time::Duration};
 
-use bitcoin::address::{Address, NetworkChecked};
+use bitcoin::{
+    Network,
+    address::{Address, NetworkChecked},
+};
 use esplora_client::{Builder, Utxo};
 use log::{debug, error, info};
 
@@ -15,6 +18,13 @@ pub(crate) const SLEEP_SECS: u64 = 10;
 
 /// A [`HashMap`] that maps an address to multiple [`Utxo`]s.
 pub(crate) type UtxoDB = HashMap<Address<NetworkChecked>, Vec<Utxo>>;
+
+/// Bitcoin Mempool.space Esplora API base URL.
+pub(crate) const BITCOIN_ESPLORA: &str = "https://mempool.space/api";
+/// Signet Mempool.space Esplora API base URL.
+pub(crate) const SIGNET_ESPLORA: &str = "https://mempool.space/signet/api";
+/// Testnet4 Mempool.space Esplora API base URL.
+pub(crate) const TESTNET4_ESPLORA: &str = "https://mempool.space/testnet4/api";
 
 /// Parameters of an [`Event`].
 #[derive(Clone, Debug)]
@@ -95,15 +105,37 @@ pub(crate) fn handle_event(config: &Config, event: &Event) -> Result<(), SmaugEr
     Ok(())
 }
 
-/// Long-poll the Esplora API, compute diffs in address state and notify the recipients.
+/// Long-poll the Esplora API, compute diffs of the address states and notify the recipients.
 pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
-    // Build the esplora client `Smaug` will use to make requests.
-    let esplora = Builder::new(&config.esplora_url).build_blocking();
+    let base_url = match &config.esplora_url {
+        Some(url) => {
+            debug!("Using configured Esplora API: {url}");
+            url
+        }
+        None => match &config.network {
+            Network::Bitcoin => {
+                debug!("Using default Bitcoin Esplora API: {BITCOIN_ESPLORA}");
+                BITCOIN_ESPLORA
+            }
+            Network::Signet => {
+                debug!("Using default Signet Esplora API: {SIGNET_ESPLORA}");
+                SIGNET_ESPLORA
+            }
+            Network::Testnet4 => {
+                debug!("Using default Testnet4 API: {TESTNET4_ESPLORA}");
+                TESTNET4_ESPLORA
+            }
+            _ => unreachable!("Other networks are not supported"),
+        },
+    };
+
+    // Build the esplora client `smaug` will use to make requests.
+    let esplora = Builder::new(base_url).build_blocking();
 
     // Get the current chain tip.
     let mut current_chain_tip = esplora.get_height()?;
 
-    // Perform network validation on the addresses provided.
+    // Perform network validation on the provided [`Address`]es against the configured [`Network`].
     let addresses = check_addresses(&config.addresses, &config.network)?;
 
     // Populate the [`UtxoDB`] with the initial state.
@@ -125,6 +157,7 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
         handle_event(config, &event)?;
     }
 
+    // Event Loop.
     loop {
         // Fetch the current height.
         let last_chain_tip = current_chain_tip;

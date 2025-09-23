@@ -47,7 +47,8 @@ Create a TOML file with these fields:
 ```toml
 # The netowrk to operate in: bitcoin, signet, testnet, testnet4
 network = "testnet4"
-# The URL of an esplora API
+# Optional: The URL of an Esplora API.
+# If no Esplora API is defined, the Mempool.space API will be used by default.
 esplora_url = "https://mempool.space/testnet4/api"
 # A list of addresses to watch
 addresses = [

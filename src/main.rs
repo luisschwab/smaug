@@ -27,8 +27,9 @@ struct Cli {
 pub(crate) struct Config {
     /// The network this program will operate on.
     pub(crate) network: Network,
-    /// The full URL of the Esplora chain-source.
-    pub(crate) esplora_url: String,
+    /// The Esplora API URL.
+    /// A default Esplora API will be used, if left empty.
+    pub(crate) esplora_url: Option<String>,
     /// The list of addresses to watch for movement.
     pub(crate) addresses: Vec<Address<NetworkUnchecked>>,
     /// Wheter to notify of address subscriptions (this will run once, at startup).
@@ -67,7 +68,7 @@ fn parse_config(config_path: &str) -> Config {
     debug!("");
     debug!("[smaug]");
     debug!("network = {}", config.network);
-    debug!("esplora_url = {}", config.esplora_url);
+    debug!("esplora_url = {:#?}", config.esplora_url);
     debug!("addresses = {:#?}", config.addresses);
     debug!("notify_subscriptions = {:#?}", config.notify_subscriptions);
     debug!("notify_deposits = {}", config.notify_deposits);
