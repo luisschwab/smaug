@@ -50,12 +50,24 @@ pub(crate) fn build_messages(config: &Config, event: &Event) -> Result<Vec<Messa
 
     let (subject, body) = match event {
         Event::Subscription(addresses) => {
-            let subject = format!("You're now subscribed to {} addresses", addresses.len());
+            let num_addresses = addresses.len();
 
-            let mut body = String::from("You are now subscribed to these addresses:");
+            let subject: String = match num_addresses {
+                1 => format!("You're now subscribed to 1 address"),
+                _ => format!("You're now subscribed to {} addresses", num_addresses),
+            };
+
+            let mut body: String = match num_addresses {
+                1 => String::from("You are now subscribed to this address:"),
+                _ => String::from("You're now subscribed to these addresses:"),
+            };
             for address in addresses {
                 body.push_str(&format!("\n- {}", address));
             }
+
+            debug!("Event::Subscription email:");
+            debug!(" Subject: {subject}");
+            debug!(" Body: {body}");
 
             (subject, body)
         }
@@ -75,6 +87,10 @@ pub(crate) fn build_messages(config: &Config, event: &Event) -> Result<Vec<Messa
                 event_params.height
             );
 
+            debug!("Event::Deposit email:");
+            debug!(" Subject: {subject}");
+            debug!(" Body: {body}");
+
             (subject, body)
         }
         Event::Withdrawal(event_params) => {
@@ -92,6 +108,10 @@ pub(crate) fn build_messages(config: &Config, event: &Event) -> Result<Vec<Messa
                 event_params.address,
                 event_params.height
             );
+
+            debug!("Event::Withdrawal email:");
+            debug!(" Subject: {subject}");
+            debug!(" Body: {body}");
 
             (subject, body)
         }
