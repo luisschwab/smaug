@@ -1,8 +1,8 @@
+# Smaug
+
 <p align="center">
   <img src="smaug.jpg" width="50%" alt="Smaug">
 </p>
-
-# Smaug
 
 > Well, thief! I smell you, I hear your breath, I feel your air. Where are you?
 >
