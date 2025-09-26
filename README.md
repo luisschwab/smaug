@@ -29,6 +29,12 @@ Install the Rust toolchain:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
+Fix environment:
+```shell
+echo '. "$HOME/.cargo/env"' >> ~/.bashrc
+source ~/.bashrc
+```
+
 Clone this repository and install the binary:
 ```
 git clone https://github.com/luisschwab/smaug
