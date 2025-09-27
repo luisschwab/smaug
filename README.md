@@ -94,6 +94,14 @@ smaug -c config.toml
 
 ```
 
+__Note:__ Some cloud providers block SMTP ports 25, 465, and 587 by default. This is the case with [Digital Oceans](https://docs.digitalocean.com/support/why-is-smtp-blocked/), for example. To check this in advance, it is a good idea to test the SMTP connection to the gmail.com server.
+
+```shell
+timeout 8 openssl s_client -starttls smtp -crlf -connect smtp.gmail.com:587 </dev/null
+```
+
+-> If a server certificate is displayed, the connection is possible.
+
 Optionally, use the example [`systemd`](./smaug.service.example) service provided here:
 ```shell
 cp smaug.service.example /etc/systemd/system/smaug.service
