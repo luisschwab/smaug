@@ -1,4 +1,4 @@
-# Smaug
+# smaug 🐉
 
 <p align="center">
   <img src="smaug.jpg" width="50%" alt="Smaug">

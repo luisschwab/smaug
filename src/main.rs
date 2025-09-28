@@ -49,7 +49,7 @@ pub(crate) struct Config {
 }
 
 fn parse_config(config_path: &str) -> Config {
-    let config_str = match fs::read_to_string(&config_path) {
+    let config_str = match fs::read_to_string(config_path) {
         Ok(config_str) => config_str,
         Err(_) => {
             error!("Failed to open `{config_path}`. Does the file exist?");
@@ -84,7 +84,7 @@ fn parse_config(config_path: &str) -> Config {
 
 /// Check that the addresses and network provided are a match.
 pub(crate) fn check_addresses(
-    addresses: &Vec<Address<NetworkUnchecked>>,
+    addresses: &[Address<NetworkUnchecked>],
     network: &Network,
 ) -> Result<Vec<Address>, SmaugError> {
     addresses
@@ -92,7 +92,7 @@ pub(crate) fn check_addresses(
         .map(|addr| {
             addr.clone()
                 .require_network(network.to_owned())
-                .map_err(|e| SmaugError::NetworkMismatch(e))
+                .map_err(SmaugError::NetworkMismatch)
         })
         .collect()
 }
@@ -117,10 +117,14 @@ fn main() -> Result<(), SmaugError> {
         .parse_default_env()
         .init();
 
+    // Parse the `config`/`c` CLI argument into [`Cli`].
     let args: Cli = argh::from_env();
-    let config = parse_config(&args.config);
 
-    let _ = smaug(&config)?;
+    // Parse the TOML config file into [`Config`].
+    let config: Config = parse_config(&args.config);
+
+    // Run the "watchdragon".
+    smaug(&config)?;
 
     Ok(())
 }

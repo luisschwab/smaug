@@ -1,4 +1,4 @@
-use std::{collections::HashMap, thread, time::Duration};
+use std::{collections::HashMap, process, thread, time::Duration};
 
 use bitcoin::{
     Network,
@@ -14,19 +14,19 @@ use crate::check_addresses;
 use crate::email::{EmailError, build_messages, send_messages};
 
 /// The amount of seconds to sleep for between checks.
-pub(crate) const SLEEP_SECS: u64 = 10;
+pub(crate) const POLLING_PERIOD_SEC: u64 = 10;
 
 /// A [`HashMap`] that maps an address to multiple [`Utxo`]s.
 pub(crate) type UtxoDB = HashMap<Address<NetworkChecked>, Vec<Utxo>>;
 
-/// Bitcoin Mempool.space Esplora API base URL.
+/// Default Esplora API base URLs.
 pub(crate) const BITCOIN_ESPLORA: &str = "https://mempool.space/api";
 /// Signet Mempool.space Esplora API base URL.
 pub(crate) const SIGNET_ESPLORA: &str = "https://mempool.space/signet/api";
 /// Testnet4 Mempool.space Esplora API base URL.
 pub(crate) const TESTNET4_ESPLORA: &str = "https://mempool.space/testnet4/api";
 
-/// Parameters of an [`Event`].
+/// Parameters of an [`Event`] of kind `Subscription` or `Deposit`.
 #[derive(Clone, Debug)]
 pub(crate) struct EventParams {
     /// What address this event refers to.
@@ -37,7 +37,7 @@ pub(crate) struct EventParams {
     pub(crate) height: u32,
 }
 
-/// An address-related event.
+/// An [`Event`] about a Bitcoin address.
 #[derive(Clone, Debug)]
 pub(crate) enum Event {
     /// Subscription to a set of addresses.
@@ -50,7 +50,7 @@ pub(crate) enum Event {
 
 #[derive(Debug, Error)]
 pub(crate) enum SmaugError {
-    /// Error parsing an [Address<NetworkUnchecked>] to an [Address<NetworkChecked>].
+    /// Error parsing an [`Address<NetworkUnchecked>`] to an [`Address<NetworkChecked>`].
     #[error(transparent)]
     NetworkMismatch(#[from] bitcoin::address::ParseError),
 
@@ -66,7 +66,7 @@ pub(crate) enum SmaugError {
 /// Compute the difference in the set of UTXOs locked to an address.
 ///
 /// Returns two vectors: deposited UTXOs and withdrawn UTXOs.
-pub(crate) fn compute_diff(current_state: &Vec<Utxo>, last_state: &Vec<Utxo>) -> (Vec<Utxo>, Vec<Utxo>) {
+pub(crate) fn compute_diff(current_state: &[Utxo], last_state: &[Utxo]) -> (Vec<Utxo>, Vec<Utxo>) {
     let deposited: Vec<Utxo> = current_state
         .iter()
         .filter(|utxo| !last_state.contains(utxo))
@@ -90,12 +90,12 @@ pub(crate) fn handle_event(config: &Config, event: &Event) -> Result<(), SmaugEr
     // iff `notify_subscriptions` and `notify_deposits` are set.
     match event {
         Event::Subscription(_) => {
-            if config.notify_deposits == true {
+            if config.notify_subscriptions {
                 send_messages(config, &messages)?;
             }
         }
         Event::Deposit(_) => {
-            if config.notify_deposits == true {
+            if config.notify_deposits {
                 send_messages(config, &messages)?;
             }
         }
@@ -105,27 +105,30 @@ pub(crate) fn handle_event(config: &Config, event: &Event) -> Result<(), SmaugEr
     Ok(())
 }
 
-/// Long-poll the Esplora API, compute diffs of the address states and notify the recipients.
+/// Long-poll the Esplora API, compute address state diffs, and notify the recipients if there is a diff.
 pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
     let base_url = match &config.esplora_url {
         Some(url) => {
-            debug!("Using configured Esplora API: {url}");
+            info!("Using configured Esplora API: {url}");
             url
         }
         None => match &config.network {
             Network::Bitcoin => {
-                debug!("Using default Bitcoin Esplora API: {BITCOIN_ESPLORA}");
+                info!("Using default Bitcoin Esplora API: {BITCOIN_ESPLORA}");
                 BITCOIN_ESPLORA
             }
             Network::Signet => {
-                debug!("Using default Signet Esplora API: {SIGNET_ESPLORA}");
+                info!("Using default Signet Esplora API: {SIGNET_ESPLORA}");
                 SIGNET_ESPLORA
             }
             Network::Testnet4 => {
-                debug!("Using default Testnet4 API: {TESTNET4_ESPLORA}");
+                info!("Using default Testnet4 Esplora API: {TESTNET4_ESPLORA}");
                 TESTNET4_ESPLORA
             }
-            _ => unreachable!("Other networks are not supported"),
+            _ => {
+                error!("Other networks are not supported");
+                process::exit(1);
+            }
         },
     };
 
@@ -142,7 +145,7 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
     let mut current_state = UtxoDB::new();
     for address in &addresses {
         // Fetch the UTXOs currently locked to the address.
-        let utxos = esplora.get_address_utxos(&address)?;
+        let utxos = esplora.get_address_utxos(address)?;
 
         info!("Subscribed to address {} at height {}", address, current_chain_tip);
 
@@ -152,7 +155,7 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
     debug!("initial_state = {:#?}", current_state);
 
     // Send subscription email iff `config.notify_subscriptions` is set.
-    if config.notify_subscriptions == true {
+    if config.notify_subscriptions {
         let event = Event::Subscription(addresses.clone());
         handle_event(config, &event)?;
     }
@@ -165,7 +168,7 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
 
         // Check if the `current_chain_tip` is superior than `last_chain_tip`. If not, skip.
         if current_chain_tip <= last_chain_tip {
-            thread::sleep(Duration::from_secs(SLEEP_SECS));
+            thread::sleep(Duration::from_secs(POLLING_PERIOD_SEC));
             continue;
         }
 
@@ -175,9 +178,9 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
         info!("Fetching state at height {}...", current_chain_tip);
 
         // Fetch the current state from Esplora.
-        let mut current_state = UtxoDB::new();
+        current_state = UtxoDB::new();
         for address in &addresses {
-            let utxos = esplora.get_address_utxos(&address)?;
+            let utxos = esplora.get_address_utxos(address)?;
             current_state.insert(address.clone(), utxos);
         }
 
@@ -187,6 +190,7 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
             let (deposited, withdrawn) =
                 compute_diff(current_state.get(address).unwrap(), last_state.get(address).unwrap());
 
+            // Create [`Event::Deposit`]s based on the `UtxoDBs` diff between the last and current states.
             for deposit in deposited {
                 let event: Event = Event::Deposit(EventParams {
                     address: address.clone(),
@@ -195,6 +199,8 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
                 });
                 events.push(event);
             }
+
+            // Create [`Event::Withdrawal`]s based on the `UtxoDBs` diff between the last and current states.
             for withdrawal in withdrawn {
                 let event: Event = Event::Withdrawal(EventParams {
                     address: address.clone(),
@@ -208,12 +214,12 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
 
         for event in &events {
             match event {
-                Event::Deposit(_) => handle_event(config, &event)?,
-                Event::Withdrawal(_) => handle_event(config, &event)?,
+                Event::Deposit(_) => handle_event(config, event)?,
+                Event::Withdrawal(_) => handle_event(config, event)?,
                 _ => {}
             }
         }
 
-        thread::sleep(Duration::from_secs(SLEEP_SECS));
+        thread::sleep(Duration::from_secs(POLLING_PERIOD_SEC));
     }
 }

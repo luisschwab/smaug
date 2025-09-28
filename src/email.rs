@@ -21,15 +21,15 @@ use crate::smaug::Event;
 pub enum EmailError {
     /// TLS error.
     #[error(transparent)]
-    TlsError(#[from] smtp::Error),
+    Tls(#[from] smtp::Error),
 
     /// Email address parsing error.
     #[error(transparent)]
-    EmailAddressParsingError(#[from] AddressError),
+    EmailAddressParsing(#[from] AddressError),
 
     /// Email building error.
     #[error(transparent)]
-    EmailBuildError(#[from] LettreError),
+    EmailBuild(#[from] LettreError),
 }
 
 /// Create an email message from an [`Event`] to every address in `recipient_emails`.
@@ -53,7 +53,7 @@ pub(crate) fn build_messages(config: &Config, event: &Event) -> Result<Vec<Messa
             let num_addresses = addresses.len();
 
             let subject: String = match num_addresses {
-                1 => format!("You're now subscribed to 1 address"),
+                1 => String::from("You're now subscribed to 1 address"),
                 _ => format!("You're now subscribed to {} addresses", num_addresses),
             };
 
@@ -120,14 +120,13 @@ pub(crate) fn build_messages(config: &Config, event: &Event) -> Result<Vec<Messa
     let messages: Vec<Message> = recipient_mailboxes
         .iter()
         .map(|mailbox| {
-            let message = Message::builder()
+            Message::builder()
                 .from(sender_mailbox.clone())
                 .to(mailbox.clone())
                 .subject(subject.clone())
                 .header(ContentType::TEXT_PLAIN)
                 .body(body.clone())
-                .unwrap();
-            message
+                .unwrap()
         })
         .collect();
 
@@ -146,7 +145,7 @@ pub(crate) fn send_messages(config: &Config, messages: &Vec<Message>) -> Result<
 
     debug!("Sending {} emails...", messages.len());
     for message in messages {
-        mailer.send(&message)?;
+        mailer.send(message)?;
         if let Some(recipient) = message.envelope().to().first() {
             info!("Sent email to {}", recipient);
         }
