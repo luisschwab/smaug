@@ -8,6 +8,7 @@ _default:
 # Check code: formatting, compilation and linting
 check:
    cargo +nightly fmt --all -- --check
+   cargo +nightly clippy -- -D warnings
    cargo check
 
 # Format code
