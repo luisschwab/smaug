@@ -175,7 +175,7 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
         info!("Fetching state at height {}...", current_chain_tip);
 
         // Fetch the current state from Esplora.
-        let mut current_state = UtxoDB::new();
+        current_state = UtxoDB::new();
         for address in &addresses {
             let utxos = esplora.get_address_utxos(&address)?;
             current_state.insert(address.clone(), utxos);
