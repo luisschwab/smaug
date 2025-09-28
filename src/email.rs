@@ -21,15 +21,15 @@ use crate::smaug::Event;
 pub enum EmailError {
     /// TLS error.
     #[error(transparent)]
-    TlsError(#[from] smtp::Error),
+    Tls(#[from] smtp::Error),
 
     /// Email address parsing error.
     #[error(transparent)]
-    EmailAddressParsingError(#[from] AddressError),
+    EmailAddressParsing(#[from] AddressError),
 
     /// Email building error.
     #[error(transparent)]
-    EmailBuildError(#[from] LettreError),
+    EmailBuild(#[from] LettreError),
 }
 
 /// Create an email message from an [`Event`] to every address in `recipient_emails`.
