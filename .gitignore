@@ -1,5 +1,9 @@
 /target
 
-config.toml
+config-bitcoin.toml
+config-signet.toml
+config-testnet3.toml
+config-testnet4.toml
+config-regtest.toml
 
 .DS_Store
