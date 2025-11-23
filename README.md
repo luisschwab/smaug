@@ -103,3 +103,8 @@ of the address (what UTXOs are locked to it). Then, it does long polling to the 
 and computes the differences between the last state and the current state, here called `Event`s.
 These get classified in `Event::Deposit` or `Event::Withdrawal`, `smaug` logs it and notifies
 the recipients via email.
+
+<p align="center">
+  <img src="smaug-diagram.png" width="80%" alt="">
+</p>
+
