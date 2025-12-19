@@ -4,8 +4,8 @@ use bitcoin::{
     Network,
     address::{Address, NetworkChecked},
 };
-use esplora_client::{Builder, Utxo};
-use log::{debug, error, info};
+use esplora_client::{BlockingClient, Builder, Utxo};
+use log::{debug, error, info, warn};
 
 use thiserror::Error;
 
@@ -14,7 +14,10 @@ use crate::check_addresses;
 use crate::email::{EmailError, build_messages, send_messages};
 
 /// The amount of seconds to sleep for between checks.
-pub(crate) const POLLING_PERIOD_SEC: u64 = 10;
+pub(crate) const POLLING_PERIOD_SEC: u64 = 30;
+
+/// The amount of seconds to wait before retrying after an Esplora error.
+pub(crate) const ERROR_RETRY_DELAY_SEC: u64 = 30;
 
 /// A [`HashMap`] that maps an address to multiple [`Utxo`]s.
 pub(crate) type UtxoDB = HashMap<Address<NetworkChecked>, Vec<Utxo>>;
@@ -105,6 +108,21 @@ pub(crate) fn handle_event(config: &Config, event: &Event) -> Result<(), SmaugEr
     Ok(())
 }
 
+/// Fetch UTXOs for all addresses with retry logic.
+fn fetch_utxos_with_retry(
+    esplora: &BlockingClient,
+    addresses: &[Address<NetworkChecked>],
+) -> Result<UtxoDB, SmaugError> {
+    let mut db = UtxoDB::new();
+
+    for address in addresses {
+        let utxos = esplora.get_address_utxos(address)?;
+        db.insert(address.clone(), utxos);
+    }
+
+    Ok(db)
+}
+
 /// Long-poll the Esplora API, compute address state diffs, and notify the recipients if there is a diff.
 pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
     let base_url = match &config.esplora_url {
@@ -135,36 +153,60 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
     // Build the esplora client `smaug` will use to make requests.
     let esplora = Builder::new(base_url).build_blocking();
 
-    // Get the current chain tip.
-    let mut current_chain_tip = esplora.get_height()?;
+    // Get the current chain tip with retry.
+    let mut current_chain_tip = loop {
+        match esplora.get_height() {
+            Ok(height) => break height,
+            Err(e) => {
+                error!("Failed to fetch initial chain tip: {e}");
+                error!("Retrying in {ERROR_RETRY_DELAY_SEC} seconds...");
+                thread::sleep(Duration::from_secs(ERROR_RETRY_DELAY_SEC));
+            }
+        }
+    };
 
     // Perform network validation on the provided [`Address`]es against the configured [`Network`].
     let addresses = check_addresses(&config.addresses, &config.network)?;
 
-    // Populate the [`UtxoDB`] with the initial state.
-    let mut current_state = UtxoDB::new();
-    for address in &addresses {
-        // Fetch the UTXOs currently locked to the address.
-        let utxos = esplora.get_address_utxos(address)?;
-
-        info!("Subscribed to address {} at height {}", address, current_chain_tip);
-
-        // Insert the address UTXOs into the UtxoDB.
-        current_state.insert(address.clone(), utxos);
-    }
-    debug!("initial_state = {:#?}", current_state);
+    // Populate the [`UtxoDB`] with the initial state with retry logic.
+    let mut current_state = loop {
+        match fetch_utxos_with_retry(&esplora, &addresses) {
+            Ok(state) => {
+                for address in &addresses {
+                    info!("Subscribed to address {} at height {}", address, current_chain_tip);
+                }
+                debug!("initial_state = {:#?}", state);
+                break state;
+            }
+            Err(e) => {
+                error!("Failed to fetch initial UTXOs: {e}");
+                error!("Retrying in {ERROR_RETRY_DELAY_SEC} seconds...");
+                thread::sleep(Duration::from_secs(ERROR_RETRY_DELAY_SEC));
+            }
+        }
+    };
 
     // Send subscription email iff `config.notify_subscriptions` is set.
     if config.notify_subscriptions {
         let event = Event::Subscription(addresses.clone());
-        handle_event(config, &event)?;
+        if let Err(e) = handle_event(config, &event) {
+            warn!("Failed to send subscription notification: {e}");
+        }
     }
 
     // Event Loop.
     loop {
         // Fetch the current height.
         let last_chain_tip = current_chain_tip;
-        current_chain_tip = esplora.get_height()?;
+        current_chain_tip = match esplora.get_height() {
+            Ok(height) => height,
+            Err(e) => {
+                error!("Failed to fetch initial UTXOs: {e}");
+                error!("Retrying in {ERROR_RETRY_DELAY_SEC} seconds...");
+                thread::sleep(Duration::from_secs(ERROR_RETRY_DELAY_SEC));
+                continue;
+            }
+        };
 
         // Check if the `current_chain_tip` is superior than `last_chain_tip`. If not, skip.
         if current_chain_tip <= last_chain_tip {
@@ -177,12 +219,16 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
 
         info!("Fetching state at height {}...", current_chain_tip);
 
-        // Fetch the current state from Esplora.
-        current_state = UtxoDB::new();
-        for address in &addresses {
-            let utxos = esplora.get_address_utxos(address)?;
-            current_state.insert(address.clone(), utxos);
-        }
+        // Fetch the current state from Esplora with error handling.
+        current_state = match fetch_utxos_with_retry(&esplora, &addresses) {
+            Ok(state) => state,
+            Err(e) => {
+                warn!("Failed to fetch UTXOs: {e}");
+                warn!("Keeping previous state and retrying in {ERROR_RETRY_DELAY_SEC} seconds...");
+                thread::sleep(Duration::from_secs(ERROR_RETRY_DELAY_SEC));
+                continue;
+            }
+        };
 
         // Compute the difference between states and generate [`Event`]s.
         let mut events: Vec<Event> = Vec::new();
@@ -214,9 +260,12 @@ pub(crate) fn smaug(config: &Config) -> Result<(), SmaugError> {
 
         for event in &events {
             match event {
-                Event::Deposit(_) => handle_event(config, event)?,
-                Event::Withdrawal(_) => handle_event(config, event)?,
-                _ => {}
+                Event::Deposit(_) | Event::Withdrawal(_) => {
+                    if let Err(e) = handle_event(config, event) {
+                        warn!("Failed to handle event: {e}");
+                    }
+                }
+                _ => unreachable!(),
             }
         }
 
