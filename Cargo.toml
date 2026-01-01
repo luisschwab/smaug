@@ -11,7 +11,7 @@ keywords = ["bitcoin", "email", "lotr"]
 [dependencies]
 esplora-client = { git = "https://github.com/bitcoindevkit/rust-esplora-client", features = ["blocking-https-rustls"] }
 env_logger = "0.11.8"
-log = "0.4.28"
+log = "0.4.29"
 serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["rt-multi-thread", "net", "macros"] }
