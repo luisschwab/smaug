@@ -1,9 +1,14 @@
+alias b := build
 alias c := check
 alias f := format
 alias r := run
 
 _default:
     @just --list
+
+# Build `smaug` in release mode
+build:
+    cargo build --release
 
 # Check code: formatting, compilation and linting
 check:
