@@ -328,13 +328,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.0",
 ]
 
 [[package]]
 name = "esplora-client"
 version = "0.12.1"
-source = "git+https://github.com/bitcoindevkit/rust-esplora-client#8f3a67e53d3a9a9747d0e977301015ba8dca2d0d"
+source = "git+https://github.com/bitcoindevkit/rust-esplora-client#2f364e2b530e4c749ff3cb3732cf26b5f8cd1eec"
 dependencies = [
  "bitcoin",
  "hex-conservative",
@@ -1133,7 +1133,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.0",
 ]
 
 [[package]]
@@ -1440,7 +1440,7 @@ dependencies = [
  "getrandom 0.3.3",
  "once_cell",
  "rustix",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.0",
 ]
 
 [[package]]
