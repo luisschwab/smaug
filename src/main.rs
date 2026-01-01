@@ -19,7 +19,11 @@ mod smaug;
 struct Cli {
     /// the path to the TOML configuration file
     #[argh(option, short = 'c')]
-    config: String,
+    config: Option<String>,
+
+    /// print smaug's version
+    #[argh(switch, short = 'v', long = "version")]
+    version: bool,
 }
 
 /// `smaug` configuration parameters.
@@ -120,8 +124,21 @@ fn main() -> Result<(), SmaugError> {
     // Parse the `config`/`c` CLI argument into [`Cli`].
     let args: Cli = argh::from_env();
 
+    if args.version {
+        println!("{} version {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+        println!("{}", env!("CARGO_PKG_DESCRIPTION"));
+
+        return Ok(());
+    }
+
+    let config_path = args.config.unwrap_or_else(|| {
+        eprintln!("Error: --config is required");
+        eprintln!("Run smaug --help for more information.");
+        process::exit(1);
+    });
+
     // Parse the TOML config file into [`Config`].
-    let config: Config = parse_config(&args.config);
+    let config: Config = parse_config(&config_path);
 
     // Run the "watchdragon".
     smaug(&config)?;
