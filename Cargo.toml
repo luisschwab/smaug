@@ -1,9 +1,9 @@
 [package]
-name = "smaug"
+name = "smaugd"
 version = "1.6.0"
 edition = "2024"
 authors = ["Luis Schwab <luisschwab@protonmail.com"]
-description = "smaug 🐉 guards your coins and sends you an email if they move"
+description = "Smaug 🐉 guards your coins and sends you an email if they move"
 repository = "https://github.com/luisschwab/smaug"
 license = "MIT"
 readme = "README.md"
