@@ -1,15 +1,16 @@
 [package]
 name = "smaug"
-version = "1.5.0"
+version = "1.6.0"
 edition = "2024"
 authors = ["Luis Schwab <luisschwab@protonmail.com"]
 description = "smaug 🐉 guards your coins and sends you an email if they move"
+repository = "https://github.com/luisschwab/smaug"
 license = "MIT"
 readme = "README.md"
 keywords = ["bitcoin", "email", "lotr"]
 
 [dependencies]
-esplora-client = { git = "https://github.com/bitcoindevkit/rust-esplora-client", features = ["blocking-https-rustls"] }
+esplora-client = { version = "0.12.2", features = ["blocking-https-rustls"] }
 env_logger = "0.11.8"
 log = "0.4.29"
 serde = { version = "1.0.228", features = ["derive"] }
