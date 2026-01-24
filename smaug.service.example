@@ -1,5 +1,5 @@
 [Unit]
-Description=Smaug, the UTXO guardian
+Description=Smaug the UTXO guardian
 After=network-online.target
 
 [Service]
