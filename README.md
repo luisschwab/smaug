@@ -26,14 +26,15 @@ from child seeds elsewhere before an attacker gets his hands on them.
 
 Install the Rust toolchain:
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+% curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Clone this repository and install the binary:
+Install the package from [`crates.io`](https://crates.io/crates/smaugd):
 ```
-git clone https://github.com/luisschwab/smaug
-cd smaug
-cargo install --path .
+% cargo install smaugd
+
+% which smaug
+/root/.cargo/bin/smaug
 ```
 
 Get these SMTP credentials from your provider (or from yourself, if you're into that kind of thing):
